@@ -13,6 +13,24 @@ import yaml
 from PIL import Image
 
 
+""" CODICE PER ACCESSO REMOTO AL DATASET
+
+     if args.dataset == 'bosch':  #RICORDATE DI CAMBIARE L'ARGOMENTO DA LINEA DI COMANDO QUANDO ESEGUITE 
+        print("sto qua")
+        #
+        data_files = {"train": "train.tar.gz", "test": "test.tar.gz"}
+        dataset = load_dataset("shpotes/bosch-small-traffic-lights-dataset", trust_remote_code=True, revision="main", data_files=data_files)
+        print("dataset scaricato")
+        print(dataset)
+        data_dir = '../data/dataset/'
+        train_data = dataset['train']
+        test_data = dataset['test']
+
+        #ISTRUZIONE PER CARICARE SOLO UN FILE DEL DATASET
+        #subset = load_dataset("shpotes/bosch-small-traffic-lights-dataset", data_files="train.tar.gz")
+"""
+
+
 def get_dataset(args):
     """ Returns train and test datasets and a user group which is a dict where
     the keys are the user index and the values are the corresponding data for
