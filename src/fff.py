@@ -14,6 +14,7 @@ import yaml
 from PIL import Image
 from torchvision import transforms
 
+
 ##########################
 class TrafficLightDataset(Dataset):
     def __init__(self, yaml_file, transform=None):
@@ -27,20 +28,21 @@ class TrafficLightDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.data[idx]['path']
         image = Image.open(img_path).convert('RGB')
-        
+
         boxes = self.data[idx]['boxes']
         labels = []
         for box in boxes:
             labels.append(box['label'])
-        
+
         if self.transform:
             image = self.transform(image)
-        
+
         # Convert labels to a single label (if applicable)
         # If multi-label classification is needed, convert to a one-hot encoding or similar representation
         labels = labels[0]  # Assuming you want to use the first label for now
 
         return image, labels
+
 
 # Esempio di utilizzo
 transform = transforms.Compose([
@@ -106,6 +108,7 @@ for idx, (client_x, client_y) in enumerate(zip(x_split, y_split)):
     x_tests[str(idx)] = client_x[train_end_idx:]
     y_tests[str(idx)] = client_y[train_end_idx:]
 
+
 class CNN(Model):
     def __init__(self):
         super(CNN, self).__init__()
@@ -127,6 +130,7 @@ class CNN(Model):
         x = self.dense1(x)
         x = self.dropout(x)
         return self.dense2(x)
+
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, model, X_train, y_train, X_test, y_test):
@@ -152,9 +156,11 @@ class FlowerClient(fl.client.NumPyClient):
         loss, accuracy = self.model.evaluate(self.X_test, self.y_test, batch_size=32, verbose=0)
         return loss, len(self.X_test), {"accuracy": accuracy}
 
+
 def create_client(cid, model_class, x_trains, y_trains, x_tests, y_tests) -> FlowerClient:
     model = model_class()
     return FlowerClient(model, x_trains[cid], y_trains[cid], x_tests[cid], y_tests[cid])
+
 
 client_fnc = partial(
     create_client,
@@ -165,10 +171,12 @@ client_fnc = partial(
     y_tests=y_tests,
 )
 
+
 def weighted_average(metrics):
     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
     examples = [num_examples for num_examples, _ in metrics]
     return {"accuracy": int(sum(accuracies)) / int(sum(examples))}
+
 
 # Create FedAvg strategy
 strategy = fl.server.strategy.FedAvg(

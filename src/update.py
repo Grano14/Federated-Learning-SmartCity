@@ -39,9 +39,9 @@ class LocalUpdate(object):
         and user indexes.
         """
         # split indexes for train, validation, and test (80, 10, 10)
-        idxs_train = idxs[:int(0.8*len(idxs))]
-        idxs_val = idxs[int(0.8*len(idxs)):int(0.9*len(idxs))]
-        idxs_test = idxs[int(0.9*len(idxs)):]
+        idxs_train = idxs[:int(0.8 * len(idxs))]
+        idxs_val = idxs[int(0.8 * len(idxs)):int(0.9 * len(idxs))]
+        idxs_test = idxs[int(0.9 * len(idxs)):]
 
         trainloader = DataLoader(DatasetSplit(dataset, idxs_train),
                                  batch_size=32, shuffle=True)
@@ -79,10 +79,10 @@ class LocalUpdate(object):
                     print('| Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                         global_round, iter, batch_idx * len(images),
                         len(self.trainloader.dataset),
-                        100. * batch_idx / len(self.trainloader), loss.item()))
+                                            100. * batch_idx / len(self.trainloader), loss.item()))
                 self.logger.add_scalar('loss', loss.item())
                 batch_loss.append(loss.item())
-            epoch_loss.append(sum(batch_loss)/len(batch_loss))
+            epoch_loss.append(sum(batch_loss) / len(batch_loss))
 
         return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
 
@@ -107,7 +107,7 @@ class LocalUpdate(object):
             correct += torch.sum(torch.eq(pred_labels, labels)).item()
             total += len(labels)
 
-        accuracy = correct/total
+        accuracy = correct / total
         return accuracy, loss
 
 
@@ -137,5 +137,5 @@ def test_inference(args, model, test_dataset):
         correct += torch.sum(torch.eq(pred_labels, labels)).item()
         total += len(labels)
 
-    accuracy = correct/total
+    accuracy = correct / total
     return accuracy, loss

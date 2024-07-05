@@ -19,7 +19,6 @@ def get_dataset(args):
     each of those users.
     """
 
-
     #######################################
     class TrafficLightDataset(Dataset):
         def __init__(self, yaml_file, transform=None):
@@ -33,22 +32,22 @@ def get_dataset(args):
         def __getitem__(self, idx):
             img_path = self.data[idx]['path']
             image = Image.open(img_path).convert('RGB')
-            
+
             boxes = self.data[idx]['boxes']
             labels = []
             for box in boxes:
                 labels.append(0)
-            
+
             if self.transform:
                 image = self.transform(image)
-            
+
             # Convert labels to a single label (if applicable)
             # If multi-label classification is needed, convert to a one-hot encoding or similar representation
             # Assuming you want to use the first label for now
             labels = 0
 
             return image, labels
-        
+
     # Esempio di utilizzo
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -58,7 +57,6 @@ def get_dataset(args):
 
     #######################################
 
-    
     if args.dataset == 'cifar':
         dataset = TrafficLightDataset(yaml_file='/home/giuseppe/Scaricati/train/train.yaml', transform=transform)
 
@@ -69,13 +67,12 @@ def get_dataset(args):
 
         # Dividiamo il dataset in set di addestramento e di test
         train_dataset, test_dataset = random_split(dataset, [num_train, num_test])
-    
+
         # Ora train_dataset e test_dataset sono oggetti Dataset di PyTorch
         # contenenti rispettivamente i dati di addestramento e di test.
 
         print("Numero di campioni nel set di addestramento:", len(train_dataset))
         print("Numero di campioni nel set di test:", len(test_dataset))
-
 
         # sample training data amongst users
         if args.iid:
