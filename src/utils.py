@@ -14,7 +14,7 @@ from PIL import Image
 
 
 """ CODICE PER ACCESSO REMOTO AL DATASET
-
+def get_dataset_remote(args):
      if args.dataset == 'bosch':  #RICORDATE DI CAMBIARE L'ARGOMENTO DA LINEA DI COMANDO QUANDO ESEGUITE 
         print("sto qua")
         #
