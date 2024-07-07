@@ -124,7 +124,7 @@ if __name__ == '__main__':
     print("|---- Test Accuracy: {:.2f}%".format(100 * test_acc))
 
     # Saving the objects train_loss and train_accuracy:
-    file_name = '../save/objects/{}{}{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'.format(
+    file_name = './save/objects/{}{}{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'.format(
         args.dataset, args.model, args.epochs, args.frac, args.iid, args.local_ep, args.local_bs)
 
     with open(file_name, 'wb') as f:
