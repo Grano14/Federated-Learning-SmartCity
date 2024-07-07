@@ -7,17 +7,18 @@ import torch
 from torchvision import datasets, transforms
 from sampling import mnist_iid, mnist_noniid, mnist_noniid_unequal
 from sampling import cifar_iid, cifar_noniid
+from datasets import load_dataset
 
 from torch.utils.data import Dataset, random_split
 import yaml
 from PIL import Image
 
 
-""" CODICE PER ACCESSO REMOTO AL DATASET
+#CODICE PER ACCESSO REMOTO AL DATASET
 def get_dataset_remote(args):
-     if args.dataset == 'bosch':  #RICORDATE DI CAMBIARE L'ARGOMENTO DA LINEA DI COMANDO QUANDO ESEGUITE 
+     
+    if args.dataset == 'bosch':  #RICORDATE DI CAMBIARE L'ARGOMENTO DA LINEA DI COMANDO QUANDO ESEGUITE 
         print("sto qua")
-        #
         data_files = {"train": "train.tar.gz", "test": "test.tar.gz"}
         dataset = load_dataset("shpotes/bosch-small-traffic-lights-dataset", trust_remote_code=True, revision="main", data_files=data_files)
         print("dataset scaricato")
@@ -29,7 +30,7 @@ def get_dataset_remote(args):
         #ISTRUZIONE PER CARICARE SOLO UN FILE DEL DATASET
         #subset = load_dataset("shpotes/bosch-small-traffic-lights-dataset", data_files="train.tar.gz")
 
-        if args.dataset == 'cifar':
+    if args.dataset == 'cifar':
         data_dir = '../data/cifar/'
         apply_transform = transforms.Compose(
             [transforms.ToTensor(),
@@ -83,7 +84,7 @@ def get_dataset_remote(args):
                 # Chose euqal splits for every user
                 user_groups = mnist_noniid(train_dataset, args.num_users)
         return train_dataset, test_dataset, user_groups
-"""
+
 
 
 def get_dataset(args):
