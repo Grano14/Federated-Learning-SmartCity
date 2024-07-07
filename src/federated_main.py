@@ -35,7 +35,7 @@ if __name__ == '__main__':
         device = torch.device('cpu')
 
     # load dataset and user groups
-    train_dataset, test_dataset, user_groups = get_dataset_remote(args)
+    train_dataset, test_dataset, user_groups = get_dataset(args)
 
     
     # BUILD MODEL
