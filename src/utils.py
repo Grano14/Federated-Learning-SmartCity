@@ -54,7 +54,7 @@ def get_dataset(args):
             boxes = self.data[idx]['boxes']
             labels = []
             for box in boxes:
-                labels.append(0)
+                labels.append(box['label'])
 
             if self.transform:
                 image = self.transform(image)
@@ -62,7 +62,7 @@ def get_dataset(args):
             # Convert labels to a single label (if applicable)
             # If multi-label classification is needed, convert to a one-hot encoding or similar representation
             # Assuming you want to use the first label for now
-            labels = 0
+            labels = [0, 0, 0]
 
             return image, labels
 
@@ -76,7 +76,7 @@ def get_dataset(args):
     #######################################
 
     if args.dataset == 'cifar':
-        dataset = TrafficLightDataset(yaml_file='/home/giuseppe/Scaricati/train/train.yaml', transform=transform)
+        dataset = TrafficLightDataset(yaml_file='/home/giuseppe/ProgettoSmartCity/fdsml/venv/src/train.yaml', transform=transform)
 
         test_ratio = 0.2  # 20% dei dati per il set di test
         num_total = len(dataset)
