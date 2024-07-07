@@ -13,9 +13,9 @@ import yaml
 from PIL import Image
 
 
-""" CODICE PER ACCESSO REMOTO AL DATASET
+#CODICE PER ACCESSO REMOTO AL DATASET
 def get_dataset_remote(args):
-     if args.dataset == 'bosch':  #RICORDATE DI CAMBIARE L'ARGOMENTO DA LINEA DI COMANDO QUANDO ESEGUITE 
+    if args.dataset == 'bosch':  #RICORDATE DI CAMBIARE L'ARGOMENTO DA LINEA DI COMANDO QUANDO ESEGUITE 
         print("sto qua")
         #
         data_files = {"train": "train.tar.gz", "test": "test.tar.gz"}
@@ -30,29 +30,29 @@ def get_dataset_remote(args):
         #subset = load_dataset("shpotes/bosch-small-traffic-lights-dataset", data_files="train.tar.gz")
 
         if args.dataset == 'cifar':
-        data_dir = '../data/cifar/'
-        apply_transform = transforms.Compose(
-            [transforms.ToTensor(),
-             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            data_dir = '../data/cifar/'
+            apply_transform = transforms.Compose(
+                [transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-        train_dataset = datasets.CIFAR10(data_dir, train=True, download=True,
-                                       transform=apply_transform)
+            train_dataset = datasets.CIFAR10(data_dir, train=True, download=True,
+                                        transform=apply_transform)
 
-        test_dataset = datasets.CIFAR10(data_dir, train=False, download=True,
-                                      transform=apply_transform)
+            test_dataset = datasets.CIFAR10(data_dir, train=False, download=True,
+                                        transform=apply_transform)
 
-        # sample training data amongst users
-        if args.iid:
-            # Sample IID user data from Mnist
-            user_groups = cifar_iid(train_dataset, args.num_users)
-        else:
-            # Sample Non-IID user data from Mnist
-            if args.unequal:
-                # Chose uneuqal splits for every user
-                raise NotImplementedError()
+            # sample training data amongst users
+            if args.iid:
+                # Sample IID user data from Mnist
+                user_groups = cifar_iid(train_dataset, args.num_users)
             else:
-                # Chose euqal splits for every user
-                user_groups = cifar_noniid(train_dataset, args.num_users)
+                # Sample Non-IID user data from Mnist
+                if args.unequal:
+                    # Chose uneuqal splits for every user
+                    raise NotImplementedError()
+                else:
+                    # Chose euqal splits for every user
+                    user_groups = cifar_noniid(train_dataset, args.num_users)
 
     elif args.dataset == 'mnist' or 'fmnist':
         if args.dataset == 'mnist':
@@ -83,7 +83,7 @@ def get_dataset_remote(args):
                 # Chose euqal splits for every user
                 user_groups = mnist_noniid(train_dataset, args.num_users)
         return train_dataset, test_dataset, user_groups
-"""
+
 
 
 def get_dataset(args):

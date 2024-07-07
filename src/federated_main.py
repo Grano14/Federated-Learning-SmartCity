@@ -15,7 +15,7 @@ from tensorboardX import SummaryWriter
 from options import args_parser
 from update import LocalUpdate, test_inference
 from models import MLP, CNNMnist, CNNFashion_Mnist, CNNCifar
-from utils import get_dataset, average_weights, exp_details
+from utils import get_dataset, get_dataset_remote, average_weights, exp_details
 
 if __name__ == '__main__':
     start_time = time.time()
