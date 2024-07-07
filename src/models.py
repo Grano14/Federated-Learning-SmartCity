@@ -11,17 +11,17 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.layer_input = nn.Linear(dim_in, dim_hidden)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout()
+        self.dropout = nn.Dropout(p=0.5)
         self.layer_hidden = nn.Linear(dim_hidden, dim_out)
-        self.softmax = nn.Softmax(dim=1)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x = x.view(-1, x.shape[1]*x.shape[-2]*x.shape[-1])
-        x = self.layer_input(x)
-        x = self.dropout(x)
-        x = self.relu(x)
-        x = self.layer_hidden(x)
-        return self.softmax(x)
+        x = x.view(-1, x.shape[1] * x.shape[-2] * x.shape[-1])  # Flatten the input
+        x = self.layer_input(x)  # Apply input layer
+        x = self.dropout(x)  # Apply dropout
+        x = self.relu(x)  # Apply ReLU activation
+        x = self.layer_hidden(x)  # Apply hidden layer
+        return self.sigmoid(x) 
 
 
 class CNNMnist(nn.Module):
