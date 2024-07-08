@@ -13,7 +13,7 @@ from torch.utils.data import Dataset, random_split
 import yaml
 from PIL import Image
 
-
+####
 #CODICE PER ACCESSO REMOTO AL DATASET
 def get_dataset_remote(args):
      
@@ -117,18 +117,17 @@ def get_dataset(args):
             # If multi-label classification is needed, convert to a one-hot encoding or similar representation
             #label di test per il funzionamento del modello (va aggiunta la logica di mapping)
             #funzione di mapping
-            label = 00000
+            label = 0
             if 'Green' in labels:
-                label += 1000
+                label = 10
             if 'Yellow' in labels:
-                label += 1000
+                label = 2
             if 'Red' in labels:
-                label += 100
+                label = 3
             if 'off' in labels:
-                label += 10
+                label = 4
 
             labels = label
-            print(labels)
 
             return image, labels
 
