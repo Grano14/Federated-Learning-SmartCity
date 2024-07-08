@@ -8,15 +8,88 @@ from torchvision import datasets, transforms
 from sampling import mnist_iid, mnist_noniid, mnist_noniid_unequal
 from sampling import cifar_iid, cifar_noniid
 from datasets import load_dataset
+import numpy as np
 
 from torch.utils.data import Dataset, random_split
 import yaml
 from PIL import Image
 
 
-#CODICE PER ACCESSO REMOTO AL DATASET
+# CODICE PER ACCESSO REMOTO AL DATASET
+# Custom Dataset class for Bosch dataset
+# Versione del codice di gioacchino. Bisognoa integrare la porzione del codice che non necessita della reintsallazione del Dataset
+class BoschDataset(Dataset):
+    def __init__(self, yaml_file, transform=None):
+        with open(yaml_file, 'r') as file:
+            self.data = yaml.safe_load(file)
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        img_path = self.data[idx]['path']
+        image = Image.open(img_path).convert('RGB')
+
+        boxes = self.data[idx]['boxes']
+        labels = []
+        for box in boxes:
+            labels.append(box['label'])
+
+        if self.transform:
+            image = self.transform(image)
+
+        # Convert labels to a single label (if applicable)
+        labels = [0, 0, 0]  # Assuming a default label format for demonstration
+
+        return image, torch.tensor(labels)
+
+
 def get_dataset_remote(args):
-     
+    # Force redownload the Bosch dataset
+    dataset = load_dataset("shpotes/bosch-small-traffic-lights-dataset", download_mode="force_redownload",
+                           trust_remote_code=True)
+
+    # Accessing the train and test splits directly
+    train_dataset = dataset['train']
+    test_dataset = dataset['test']
+
+    # Transform can be applied directly if needed, e.g., using torchvision transforms
+    transform = None  # Define your transform if needed
+
+    # Create user groups (assuming you have a function to create user groups)
+    user_groups = create_user_groups(train_dataset, args)
+
+    return train_dataset, test_dataset, user_groups
+
+
+def create_user_groups(dataset, args):
+    """
+    Create user groups for federated learning.
+    Args:
+        dataset: The training dataset.
+        args: Arguments containing the number of users and IID setting.
+
+    Returns:
+        user_groups: A dictionary mapping each user to a list of data indices.
+    """
+    num_users = int(1 / args.frac)  # Calculate the number of users based on the fraction
+    num_items = int(len(dataset) / num_users)  # Number of items per user
+
+    # Shuffle the data indices
+    all_idxs = np.arange(len(dataset))
+    np.random.shuffle(all_idxs)
+
+    # Create user groups
+    user_groups = {i: all_idxs[i * num_items:(i + 1) * num_items] for i in range(num_users)}
+
+    return user_groups
+
+
+"""
+# Versione del codice di gioacchino. Bisognoa integrare la porzione del codice che non necessita della reintsallazione del Dataset
+def get_dataset_remote(args):
+
     if args.dataset == 'bosch':  #RICORDATE DI CAMBIARE L'ARGOMENTO DA LINEA DI COMANDO QUANDO ESEGUITE 
         print("sto qua")
         data_files = {"train": "train.tar.gz", "test": "test.tar.gz"}
@@ -83,16 +156,16 @@ def get_dataset_remote(args):
             else:
                 # Chose euqal splits for every user
                 user_groups = mnist_noniid(train_dataset, args.num_users)
-        return train_dataset, test_dataset, user_groups
+        return train_dataset, test_dataset, user_groups"""
 
-#funione per ottenere il dataset dal file locale 
+
 def get_dataset(args):
     """ Returns train and test datasets and a user group which is a dict where
     the keys are the user index and the values are the corresponding data for
     each of those users.
     """
 
-    #classe per la lettura del file train.yaml che contiene le label delle immagini e per l'istanziazione del dataset
+    #######################################
     class TrafficLightDataset(Dataset):
         def __init__(self, yaml_file, transform=None):
             with open(yaml_file, 'r') as file:
@@ -114,38 +187,26 @@ def get_dataset(args):
             if self.transform:
                 image = self.transform(image)
 
+            # Convert labels to a single label (if applicable)
             # If multi-label classification is needed, convert to a one-hot encoding or similar representation
-            #label di test per il funzionamento del modello (va aggiunta la logica di mapping)
-            #funzione di mapping
-            label = 00000
-            if 'Green' in labels:
-                label += 1000
-            if 'Yellow' in labels:
-                label += 1000
-            if 'Red' in labels:
-                label += 100
-            if 'off' in labels:
-                label += 10
-
-            labels = label
-            print(labels)
+            # Assuming you want to use the first label for now
+            labels = [0, 0, 0]
 
             return image, labels
 
-    #istanziazione della variabile transform per andare a trasformare le immagini 
+    # Esempio di utilizzo
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
 
-    if args.dataset == 'bosch':
+    #######################################
 
-        #inserire il path del file train.yaml
-        #istanziazione del dataset
-        dataset = TrafficLightDataset(yaml_file='/home/giuseppe/ProgettoSmartCity/fdsml/venv/src/train.yaml', transform=transform)
+    if args.dataset == 'cifar':
+        dataset = TrafficLightDataset(yaml_file='/home/giuseppe/ProgettoSmartCity/fdsml/venv/src/train.yaml',
+                                      transform=transform)
 
-        #instanziazione valore per lo split del dataset
         test_ratio = 0.2  # 20% dei dati per il set di test
         num_total = len(dataset)
         num_test = int(test_ratio * num_total)
@@ -154,7 +215,9 @@ def get_dataset(args):
         # Dividiamo il dataset in set di addestramento e di test
         train_dataset, test_dataset = random_split(dataset, [num_train, num_test])
 
-        #stampa numero di istanze nel trainset e testset
+        # Ora train_dataset e test_dataset sono oggetti Dataset di PyTorch
+        # contenenti rispettivamente i dati di addestramento e di test.
+
         print("Numero di campioni nel set di addestramento:", len(train_dataset))
         print("Numero di campioni nel set di test:", len(test_dataset))
 
@@ -170,6 +233,35 @@ def get_dataset(args):
             else:
                 # Chose euqal splits for every user
                 user_groups = cifar_noniid(train_dataset, args.num_users)
+
+    elif args.dataset == 'mnist' or 'fmnist':
+        if args.dataset == 'mnist':
+            data_dir = '../data/mnist/'
+        else:
+            data_dir = '../data/fmnist/'
+
+        apply_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))])
+
+        train_dataset = datasets.MNIST(data_dir, train=True, download=True,
+                                       transform=apply_transform)
+
+        test_dataset = datasets.MNIST(data_dir, train=False, download=True,
+                                      transform=apply_transform)
+
+        # sample training data amongst users
+        if args.iid:
+            # Sample IID user data from Mnist
+            user_groups = mnist_iid(train_dataset, args.num_users)
+        else:
+            # Sample Non-IID user data from Mnist
+            if args.unequal:
+                # Chose uneuqal splits for every user
+                user_groups = mnist_noniid_unequal(train_dataset, args.num_users)
+            else:
+                # Chose euqal splits for every user
+                user_groups = mnist_noniid(train_dataset, args.num_users)
 
     return train_dataset, test_dataset, user_groups
 
