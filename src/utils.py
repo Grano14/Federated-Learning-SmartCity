@@ -142,7 +142,7 @@ def get_dataset(args):
 
         #inserire il path del file train.yaml
         #istanziazione del dataset
-        dataset = TrafficLightDataset(yaml_file='/home/giuseppe/ProgettoSmartCity/fdsml/venv/src/train.yaml', transform=transform)
+        dataset = TrafficLightDataset(yaml_file='./dataset/train/train.yaml', transform=transform)
 
         #instanziazione valore per lo split del dataset
         test_ratio = 0.2  # 20% dei dati per il set di test
