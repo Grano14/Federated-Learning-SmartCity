@@ -3,29 +3,45 @@ import tensorflow as tf
 import requests
 import json
 from flask import Flask, request, jsonify
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
-from tensorflow.keras.optimizers import SGD
+
+from utils import get_dataset_bosch
+from sklearn.model_selection import train_test_split
 
 app = Flask(__name__)
 
 client_ip = '192.168.1.10'
 client_port = 8000
 
+CONNECT_URL = 'http://127.0.0.1:5000/connect'
 UPLOAD_URL = 'http://127.0.0.1:5000/upload_gradients'
 MODEL_URL = 'http://127.0.0.1:5000/get_model'
 
 # CREAZIONE MODELLO (UNIFORME SU TUTTI I CLIENT + SERVER)
 def create_model():
-    new_model = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)),
-        tf.keras.layers.MaxPooling2D((2, 2)),
-        tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-    new_model.compile(optimizer='sgd', loss='binary_crossentropy', metrics=['accuracy'])
-    return new_model
+
+    class MLP(tf.Module):
+        def __init__(self, dim_in, dim_hidden, dim_out):
+            super(MLP, self).__init__()
+            self.layer_input = tf.keras.layers.Dense(dim_hidden, activation='relu', input_dim=dim_in)
+            self.dropout = tf.keras.layers.Dropout(0.5)
+            self.layer_hidden = tf.keras.layers.Dense(dim_out, activation='sigmoid')
+
+        def __call__(self, inputs):
+            x = self.layer_input(inputs)
+            x = self.dropout(x)
+            return self.layer_hidden(x)
+        
+
+    train_dataset, test_dataset = get_dataset_bosch()
+
+    img_size = train_dataset[0][0].shape
+    len_in = 1
+    for x in img_size:
+        len_in *= x
+    global_model = MLP(dim_in=len_in, dim_hidden=64, dim_out=1)
+    return global_model
+
+
 
 @app.route('/receive_model', methods=['POST'])
 def receive_model():
@@ -56,11 +72,21 @@ def get_gradients(model, x, y):              #CALCOLO I PESI DEL MODELLO
 
 def main():
     # creazione modello
+    print("hello")
     model = create_model()
 
-    # Generazione dati (ora sono randomici)
-    x_train = np.random.rand(10, 64, 64, 3)
-    y_train = np.random.randint(0, 2, size=(10, 1))
+    train_dataset, test_dataset = get_dataset_bosch()
+    X_train, X_test = train_test_split(train_dataset, test_size=0.2, random_state=42)
+    print(len("ddd"))
+
+
+
+
+
+    """"
+    #Generazione dati (ora sono randomici)
+    #x_train = np.random.rand(10, 64, 64, 3)
+    #y_train = np.random.randint(0, 2, size=(10, 1))
     
     for i in range(5):
         # calcolo dei pesi
@@ -79,6 +105,7 @@ def main():
 
         
         updated_model_weights = download_updated_model()
+        """
 
 if __name__ == '__main__':
     main()
