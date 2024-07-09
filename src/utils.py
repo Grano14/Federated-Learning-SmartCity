@@ -4,7 +4,7 @@
 
 import copy
 import torch
-#from torchvision import datasets, transforms
+from torchvision import datasets, transforms
 from sampling import mnist_iid, mnist_noniid, mnist_noniid_unequal
 from sampling import cifar_iid, cifar_noniid
 from datasets import load_dataset
@@ -182,6 +182,87 @@ def get_dataset(args):
                 user_groups = cifar_noniid(train_dataset, args.num_users)
 
     return train_dataset, test_dataset, user_groups
+
+def get_dataset_bosch():
+    #classe per la lettura del file train.yaml che contiene le label delle immagini e per l'istanziazione del dataset
+    class TrafficLightDataset(Dataset):
+        def __init__(self, yaml_file, transform=None):
+            with open(yaml_file, 'r') as file:
+                self.data = json.load(file)
+            self.transform = transform
+
+        def __len__(self):
+            return len(self.data)
+
+        def __getitem__(self, idx):
+            img_path = self.data[idx]['path']
+            image = Image.open(img_path).convert('RGB')
+
+            boxes = self.data[idx]['boxes']
+            labels = 0
+            ['Yellow', 'RedLeft', 'Red', 'GreenLeft', 'Green', 'off', 'GreenRight', 'GreenStraight',
+              'GreenStraightRight', 'RedRight', 'RedStraight', 'RedStraightLeft', 'GreenStraightLeft']
+            if('label' in boxes):
+                if(boxes['label'] == 'Green' or boxes['label'] == 'GreenRight' or boxes['label'] == 'GreenLeft' or boxes['label'] == 'GreenStraight' or boxes['label'] == 'GreenStraightLeft' or boxes['label'] == 'GreenStraightRight'):
+                    labels = 1
+                if(boxes['label'] == 'Red' or boxes['label'] == 'RedRight' or boxes['label'] == 'RedStraight' or boxes['label'] == 'RedStraightLeft' or boxes['label'] == 'RedLeft'):
+                    labels = 2
+                if(boxes['label'] == 'Yellow'):
+                    labels = 3
+                if(boxes['label'] == 'off'):
+                    labels = 4#
+
+                x1, x2 = boxes['x_min'], boxes['x_max']
+                y1, y2 = boxes['y_min'], boxes['y_max']
+                roi = image.crop((x1, y1, x2, y2))
+                image = roi
+                
+            #for box in boxes:
+                #labels.append(boxes['label'])
+                #x1, x2 = boxes['x_min'], boxes['x_max']
+                #y1, y2 = boxes['y_min'], boxes['y_max']
+                #roi = image.crop((x1, y1, x2, y2))
+                
+
+            if self.transform:
+                image = self.transform(image)
+
+            # If multi-label classification is needed, convert to a one-hot encoding or similar representation
+            #label di test per il funzionamento del modello (va aggiunta la logica di mapping)
+            #funzione di mapping
+
+            return image, labels
+
+    #istanziazione della variabile transform per andare a trasformare le immagini 
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
+
+    #inserire il path del file train.yaml
+    #istanziazione del dataset
+    dataset = TrafficLightDataset(yaml_file='./dataset/train/train.json', transform=transform)
+
+    #instanziazione valore per lo split del dataset
+    test_ratio = 0.2  # 20% dei dati per il set di test
+    num_total = len(dataset)
+    num_test = int(test_ratio * num_total)
+    num_train = num_total - num_test
+
+    # Dividiamo il dataset in set di addestramento e di test
+    train_dataset, test_dataset = random_split(dataset, [num_train, num_test])
+
+    #stampa numero di istanze nel trainset e testset
+    print("Numero di campioni nel set di addestramento:", len(train_dataset))
+    print("Numero di campioni nel set di test:", len(test_dataset))
+
+    return train_dataset, test_dataset
+
+
+    
+
+        
 
 
 def average_weights(w):

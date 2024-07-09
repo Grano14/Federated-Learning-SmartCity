@@ -1,13 +1,51 @@
 from flask import Flask, request, jsonify
 import random
 import copy
-import numpy as np
+import numpy as np    
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
-from tensorflow.keras.optimizers import SGD
+import torch
+
+from utils import get_dataset_bosch
+from torch import nn
 
 app = Flask(__name__)
+
+
+# INIZIALIZZAZIONE DEL MODELLO CENTRALE
+def create_model():
+
+    class MLP(tf.Module):
+        def __init__(self, dim_in, dim_hidden, dim_out):
+            super(MLP, self).__init__()
+            self.layer_input = tf.keras.layers.Dense(dim_hidden, activation='relu', input_dim=dim_in)
+            self.dropout = tf.keras.layers.Dropout(0.5)
+            self.layer_hidden = tf.keras.layers.Dense(dim_out, activation='sigmoid')
+
+        def __call__(self, inputs):
+            x = self.layer_input(inputs)
+            x = self.dropout(x)
+            return self.layer_hidden(x)
+        
+
+    train_dataset, test_dataset = get_dataset_bosch()
+
+    img_size = train_dataset[0][0].shape
+    len_in = 1
+    for x in img_size:
+        len_in *= x
+    global_model = MLP(dim_in=len_in, dim_hidden=64, dim_out=1)
+    return global_model
+
+
+
+# Supponiamo che 'model' sia il tuo modello TensorFlow globale
+# Addestra o aggiorna il modello con i dati aggregati dai client
+
+central_model = create_model()
+# Salva il modello globale
+global_model_path = './src/modello_globale.'
+tf.saved_model.save(central_model, global_model_path)
+print(f"Modello globale salvato in: {global_model_path}")
 
 
 client_gradients = []
@@ -17,28 +55,56 @@ client_gradients = []
 update_frequency = 1  # NON SO A QUANTO METTERLA
 current_round = 0
 
-# INIZIALIZZAZIONE DEL MODELLO CENTRALE
-def create_model():
-    model = Sequential([
-        Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)),
-        MaxPooling2D((2, 2)),
-        Flatten(),
-        Dense(64, activation='relu'),
-        Dense(1, activation='sigmoid')
-    ])
-    model.compile(optimizer=SGD(), loss='binary_crossentropy', metrics=['accuracy'])
-    return model
+weights = []
 
-central_model = create_model()
+#funzione per il calcolo della media dei pesi
+def average_weights(w):
+    """
+    Returns the average of the weights.
+    """
+    w_avg = copy.deepcopy(w[0])
+    for key in w_avg.keys():
+        for i in range(1, len(w)):
+            w_avg[key] += w[i][key]
+        w_avg[key] = torch.div(w_avg[key], len(w))
+    return w_avg
+
+####################################
+@app.route('/upload_model_weights', methods=['POST'])
+def upload_model_weights():
+    if 'file' not in request.files:
+        return 'No file part', 400
+    file = request.files['file']
+    if file.filename == '':
+        return 'No selected file', 400
+    if file:
+        file.save('./src/received_model_weights.pth')
+        model_weights = torch.load('./src/received_model_weights.pth')
+        weights.append(model_weights)
+        print(len(weights))
+        if len(weights) == 5:
+            avg_w = average_weights(weights)
+            print(avg_w)
+        return 'File successfully uploaded', 200
+
+####################################
 
 
-@app.route('/connect_client', methods=['GET'])   #TENGO TRACCIA DEI CLIENT CONNESSI
+
+@app.route('/connect', methods=['GET'])   #TENGO TRACCIA DEI CLIENT CONNESSI
 def connect_client():
     #global connected_clients
+    #client_info = request.json
     #connected_clients.append(client_info)
     #print(f"Client connected: {client_info['ip']}:{client_info['port']}")
-  
-    return jsonify({"status": "Client connected"}), 200
+
+    global_model_path = './src/modello_globale.'
+
+    #Carica il modello globale
+    loaded_model = tf.saved_model.load(global_model_path)
+    #print("Modello globale caricato con successo.")
+
+    return jsonify({"status": "Client connected", "model": loaded_model}), 200
 
 
 @app.route('/send_model', methods=['POST'])     #FUNZIONE PER INVIO MODELLO CENTRALE AI CLIENT
@@ -61,6 +127,10 @@ def send_model():
             print(f"Failed to send model to {client['ip']}:{client['port']}, status code {response.status_code}")
 
     return jsonify({"status": "Model sent to selected clients"}), 200
+
+
+
+
 
 
 
