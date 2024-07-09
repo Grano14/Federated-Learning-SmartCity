@@ -11,6 +11,7 @@ from datasets import load_dataset
 
 from torch.utils.data import Dataset, random_split
 import yaml
+import json
 from PIL import Image
 
 ####
@@ -96,7 +97,7 @@ def get_dataset(args):
     class TrafficLightDataset(Dataset):
         def __init__(self, yaml_file, transform=None):
             with open(yaml_file, 'r') as file:
-                self.data = yaml.safe_load(file)
+                self.data = json.load(file)
             self.transform = transform
 
         def __len__(self):
@@ -107,9 +108,30 @@ def get_dataset(args):
             image = Image.open(img_path).convert('RGB')
 
             boxes = self.data[idx]['boxes']
-            labels = []
-            for box in boxes:
-                labels.append(box['label'])
+            labels = 0
+            ['Yellow', 'RedLeft', 'Red', 'GreenLeft', 'Green', 'off', 'GreenRight', 'GreenStraight',
+              'GreenStraightRight', 'RedRight', 'RedStraight', 'RedStraightLeft', 'GreenStraightLeft']
+            if('label' in boxes):
+                if(boxes['label'] == 'Green' or boxes['label'] == 'GreenRight' or boxes['label'] == 'GreenLeft' or boxes['label'] == 'GreenStraight' or boxes['label'] == 'GreenStraightLeft' or boxes['label'] == 'GreenStraightRight'):
+                    labels = 1
+                if(boxes['label'] == 'Red' or boxes['label'] == 'RedRight' or boxes['label'] == 'RedStraight' or boxes['label'] == 'RedStraightLeft' or boxes['label'] == 'RedLeft'):
+                    labels = 2
+                if(boxes['label'] == 'Yellow'):
+                    labels = 3
+                if(boxes['label'] == 'off'):
+                    labels = 4#
+
+                x1, x2 = boxes['x_min'], boxes['x_max']
+                y1, y2 = boxes['y_min'], boxes['y_max']
+                roi = image.crop((x1, y1, x2, y2))
+                image = roi
+                
+            #for box in boxes:
+                #labels.append(boxes['label'])
+                #x1, x2 = boxes['x_min'], boxes['x_max']
+                #y1, y2 = boxes['y_min'], boxes['y_max']
+                #roi = image.crop((x1, y1, x2, y2))
+                
 
             if self.transform:
                 image = self.transform(image)
@@ -117,17 +139,6 @@ def get_dataset(args):
             # If multi-label classification is needed, convert to a one-hot encoding or similar representation
             #label di test per il funzionamento del modello (va aggiunta la logica di mapping)
             #funzione di mapping
-            label = 0
-            if 'Green' in labels:
-                label = 10
-            if 'Yellow' in labels:
-                label = 2
-            if 'Red' in labels:
-                label = 3
-            if 'off' in labels:
-                label = 4
-
-            labels = label
 
             return image, labels
 
@@ -142,7 +153,7 @@ def get_dataset(args):
 
         #inserire il path del file train.yaml
         #istanziazione del dataset
-        dataset = TrafficLightDataset(yaml_file='./dataset/train/train.yaml', transform=transform)
+        dataset = TrafficLightDataset(yaml_file='./dataset/train/train.json', transform=transform)
 
         #instanziazione valore per lo split del dataset
         test_ratio = 0.2  # 20% dei dati per il set di test

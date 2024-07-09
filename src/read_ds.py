@@ -1,52 +1,25 @@
-import os
 import yaml
-from PIL import Image
-from torch.utils.data import Dataset, random_split
-from torchvision import transforms
 
+# Leggere il file YAML
+with open('./dataset/train/train.yaml', 'r') as file:
+    data = yaml.safe_load(file)
 
-class TrafficLightDataset(Dataset):
-    def __init__(self, yaml_file, transform=None):
-        with open(yaml_file, 'r') as file:
-            self.data = yaml.safe_load(file)
-        self.transform = transform
+new_text = '['
 
-    def __len__(self):
-        return len(self.data)
+# Visualizzare il contenuto del file YAML
+for entry in data:
+    
+    if entry['boxes']:
+        for box in entry['boxes']:
+            new_text = new_text + '{ \n\t "path": "' + entry['path'] + '", \n\t "boxes": {\n\t\t"label": "' + box['label'] + '",\n\t\t "x_min": ' + str(box['x_min']) + ',\n\t\t "x_max": ' + str(box['x_max']) + ',\n\t\t "y_min":' + str(box['y_min']) + ',\n\t\t "y_max":' + str(box['y_max']) + '\n\t}\n},\n'
+            #print(f"  Label: {box['label']}, Occluded: {box['occluded']}, Coordinates: ({box['x_min']}, {box['y_min']}) to ({box['x_max']}, {box['y_max']})")
+    else: 
+        new_text = new_text + '{ \n\t "path": "' + entry['path'] + '", \n\t "boxes": { }\n},' + '\n'
+new_text = new_text[:-2]
+new_text = new_text + ']'
 
-    def __getitem__(self, idx):
-        img_path = self.data[idx]['path']
-        image = Image.open(img_path).convert('RGB')
+# Apriamo il file in modalità append (aggiunta)
+with open('./train.txt', 'a') as file:
+    file.write(new_text + '\n')
+print(new_text)
 
-        boxes = self.data[idx]['boxes']
-        labels = []
-        bboxes = []
-        for box in boxes:
-            labels.append(box['label'])
-            bboxes.append([box['x_min'], box['y_min'], box['x_max'], box['y_max']])
-
-        if self.transform:
-            image = self.transform(image)
-
-        return image, labels, bboxes
-
-
-# Esempio di utilizzo
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-])
-
-# dataset = TrafficLightDataset(yaml_file='/home/giuseppe/Scaricati/train/train.yaml', transform=transform)
-
-# Determinare le dimensioni dei dataset di train e test
-# dataset_size = len(dataset)
-# train_size = int(0.8 * dataset_size)
-# test_size = dataset_size - train_size
-
-# Dividere il dataset in train e test
-# train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
-
-# Verifica
-# print("Dimensione del training set:", len(train_dataset))
-# print("Dimensione del test set:", len(test_dataset))
