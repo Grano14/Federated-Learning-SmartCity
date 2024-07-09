@@ -1,53 +1,74 @@
-from flask import Flask
-from flask import request, jsonify
+from flask import Flask, request, jsonify
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
+from tensorflow.keras.optimizers import SGD
 
 app = Flask(__name__)
 
-global media
-global accuracy
+# Initialize central model
+def create_model():
+    model = Sequential([
+        Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)),
+        MaxPooling2D((2, 2)),
+        Flatten(),
+        Dense(64, activation='relu'),
+        Dense(1, activation='sigmoid')
+    ])
+    model.compile(optimizer=SGD(), loss='binary_crossentropy', metrics=['accuracy'])
+    return model
 
-@app.route('/update-model', methods=['POST'])
-def update_model():
-    global central_model   # !!!!BISOGNA DEFINIRE LA STRUTTURA DEL CENTRAL MODEL (LAYER DI OGNI CLIENT ECC)!!!!!
-    
-    central_model = {}
+central_model = create_model()
 
-    #RICEZIONE PESI
-    weights = request.json['weights']
-    client_id = request.json['client_id']
-    accuracy = request.json['accuracy']
-    
-    # AGGIORNAMENTO MODELLO CON I PESI RICEVUTI
-    central_model[client_id] = weights
-    
-    #ESEMPIO DI AGGIORNAMENTO DEL MODELLO TRAMITE MEDIA DEI PESI
-    if len(central_model) > 0:
-        avg_weights = {}
-        num_clients = len(central_model)
-        for layer_name in central_model[client_id].keys():
-            avg_weights[layer_name] = sum([central_model[client_id][layer_name] for client_id in central_model.keys()]) / num_clients
-       
-        central_model = avg_weights #ALLA FIN AGGIORNA IL VALORE DEL MODELLO CENTRALE CON I PESI 
-    
-    return jsonify({'message': 'modello centrale aggiornato con successo'})
+# Store gradients from clients
+client_gradients = []
 
+# Parameters for AFO
+update_frequency = 1  # Update frequency in rounds
+current_round = 0
 
-@app.route('/get-model', methods=['GET'])
-def get_model(client_id, central_model):
-    """
-    Ottiene il modello (o i pesi) associati al client_id da central_model.
+@app.route('/upload_gradients', methods=['POST'])
+def upload_gradients():
+    global client_gradients, current_round
+    data = request.json
+    print("Data received:", data)  # Log the received data
+    gradients = np.array(data['gradients'])
+    client_gradients.append(gradients)
     
-    Args:
-    - client_id (str): Identificativo del cliente
-    - central_model (dict): Dizionario contenente i pesi dei modelli per ogni cliente e layer
+    # Check if we have gradients from all clients
+    if len(client_gradients) == 6:
+        # Average gradients (FedAvg)
+        average_gradients = np.mean(client_gradients, axis=0)
+        
+        # Apply gradients to the central model
+        apply_gradients(average_gradients)
+        
+        # Clear gradients for next round
+        client_gradients = []
+        
+        current_round += 1
     
-    Returns:
-    - dict or None: Dizionario dei pesi del modello per il client_id, se presente; None altrimenti
-    """
-    if client_id in central_model:
-        return central_model[client_id]   #NON SO SE DOBBIAMO TORNARE SOLO I PESI AGGIORNATI DI QUEL CLIENT O I PESI TOTALI (CENTRAL_MODEL)
-    else:
-        return None
+    return jsonify({"status": "Gradients received"}), 200
+
+def apply_gradients(average_gradients):
+    optimizer = central_model.optimizer
+    with tf.GradientTape() as tape:
+        central_model.train_on_batch(x=np.zeros((1, 64, 64, 3)), y=np.zeros((1, 1)))
+    weights = central_model.trainable_weights
+    optimizer.apply_gradients(zip(average_gradients, weights))
+
+@app.route('/get_model', methods=['GET'])
+def get_model():
+    weights = central_model.get_weights()
+    return jsonify({"weights": [w.tolist() for w in weights]}), 200
+
+@app.route('/update_frequency', methods=['POST'])
+def update_frequency():
+    global update_frequency
+    data = request.json
+    update_frequency = data['update_frequency']
+    return jsonify({"status": "Update frequency set"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
