@@ -2,22 +2,51 @@ import numpy as np
 import tensorflow as tf
 import requests
 import json
+from flask import Flask, request, jsonify
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
+from tensorflow.keras.optimizers import SGD
 
-SERVER_URL = 'http://127.0.0.1:5000/upload_gradients'
+app = Flask(__name__)
 
-# Define the local model (should be same architecture as central model)
+client_ip = '192.168.1.10'
+client_port = 8000
+
+UPLOAD_URL = 'http://127.0.0.1:5000/upload_gradients'
+MODEL_URL = 'http://127.0.0.1:5000/get_model'
+
+# CREAZIONE MODELLO (UNIFORME SU TUTTI I CLIENT + SERVER)
 def create_model():
-    model = tf.keras.Sequential([
+    new_model = tf.keras.Sequential([
         tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)),
         tf.keras.layers.MaxPooling2D((2, 2)),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-    model.compile(optimizer='sgd', loss='binary_crossentropy', metrics=['accuracy'])
-    return model
+    new_model.compile(optimizer='sgd', loss='binary_crossentropy', metrics=['accuracy'])
+    return new_model
 
-def get_gradients(model, x, y):
+@app.route('/receive_model', methods=['POST'])
+def receive_model():
+    global central_model
+    model_weights = request.json['model_weights']
+    model.set_weights(model_weights)
+    return jsonify({"status": "Model weights received"}), 200
+
+def download_updated_model():                   #PRENDO IL MODELLO AGGIORNATO DAL BOSS DEL POPPIN
+    response = requests.get(MODEL_URL)
+    if response.status_code == 200:
+        model_weights = json.loads(response.text)['weights']
+        return model_weights
+    else:
+        raise RuntimeError(f"Failed to download model weights: {response.status_code}")
+    
+def integrate_updated_model(model, weights):   #SERVE AD AGGIORNARE IL MODELLO SUL CLIENT
+    model.set_weights(weights)
+
+
+def get_gradients(model, x, y):              #CALCOLO I PESI DEL MODELLO
     with tf.GradientTape() as tape:
         predictions = model(x)
         loss = tf.keras.losses.binary_crossentropy(y, predictions)
@@ -26,25 +55,30 @@ def get_gradients(model, x, y):
     return gradients
 
 def main():
-    # Create a local model
-    local_model = create_model()
+    # creazione modello
+    model = create_model()
 
-    # Generate dummy data
+    # Generazione dati (ora sono randomici)
     x_train = np.random.rand(10, 64, 64, 3)
     y_train = np.random.randint(0, 2, size=(10, 1))
+    
+    for i in range(5):
+        # calcolo dei pesi
+        gradients = get_gradients(model, x_train, y_train)
 
-    # Calculate gradients
-    gradients = get_gradients(local_model, x_train, y_train)
+        # invio dei pesi al boss del poppin
+        data = {'gradients': [g.tolist() for g in gradients]}
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(UPLOAD_URL, data=json.dumps(data), headers=headers)
+        print('pesi inviati ihihihihihh')
 
-    # Send gradients to server
-    data = {'gradients': [g.tolist() for g in gradients]}
-    headers = {'Content-Type': 'application/json'}
-    response = requests.post(SERVER_URL, data=json.dumps(data), headers=headers)
+        if response.status_code == 200:
+            print('Gradients sent successfully')
+        else:
+            print('Failed to send gradients', response.text)
 
-    if response.status_code == 200:
-        print('Gradients sent successfully')
-    else:
-        print('Failed to send gradients', response.text)
+        
+        updated_model_weights = download_updated_model()
 
 if __name__ == '__main__':
     main()

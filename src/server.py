@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify
+import random
+import copy
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -7,7 +9,48 @@ from tensorflow.keras.optimizers import SGD
 
 app = Flask(__name__)
 
-# Initialize central model
+central_model = None
+client_gradients = []
+
+# PARAMETRI PER AFO
+update_frequency = 1  # NON SO A QUANTO METTERLA
+current_round = 0
+
+
+@app.route('/connect', methods=['POST'])   #TENGO TRACCIA DEI CLIENT CONNESSI
+def connect_client():
+    global connected_clients
+    client_info = request.json
+    connected_clients.append(client_info)
+    print(f"Client connected: {client_info['ip']}:{client_info['port']}")
+    return jsonify({"status": "Client connected"}), 200
+
+
+@app.route('/send_model', methods=['POST'])     #FUNZIONE PER INVIO MODELLO CENTRALE AI CLIENT
+def send_model():
+    global connected_clients
+    
+    # Copia il modello centrale attuale
+    current_model = copy.deepcopy(central_model)
+    
+    # Invia il modello a un numero casuale di client (nel tuo caso, 6)
+    selected_clients = random.sample(connected_clients, 6)
+    
+    for client in selected_clients:
+        # Simula l'invio del modello al client (sostituire con implementazione reale)
+        client_url = f"http://{client['ip']}:{client['port']}/receive_model"
+        response = requests.post(client_url, json={"model_weights": current_model.get_weights()})
+        if response.status_code == 200:
+            print(f"Model sent to {client['ip']}:{client['port']}")
+        else:
+            print(f"Failed to send model to {client['ip']}:{client['port']}, status code {response.status_code}")
+
+    return jsonify({"status": "Model sent to selected clients"}), 200
+
+
+
+
+# INIZIALIZZAZIONE DEL MODELLO CENTRALE
 def create_model():
     model = Sequential([
         Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)),
@@ -17,34 +60,26 @@ def create_model():
         Dense(1, activation='sigmoid')
     ])
     model.compile(optimizer=SGD(), loss='binary_crossentropy', metrics=['accuracy'])
-    return model
+    central_model = model
 
-central_model = create_model()
 
-# Store gradients from clients
-client_gradients = []
-
-# Parameters for AFO
-update_frequency = 1  # Update frequency in rounds
-current_round = 0
 
 @app.route('/upload_gradients', methods=['POST'])
 def upload_gradients():
     global client_gradients, current_round
     data = request.json
-    print("Data received:", data)  # Log the received data
+    print("Data received:")  # Log the received data
     gradients = np.array(data['gradients'])
     client_gradients.append(gradients)
     
     # Check if we have gradients from all clients
     if len(client_gradients) == 6:
-        # Average gradients (FedAvg)
+        # (FedAvg)
         average_gradients = np.mean(client_gradients, axis=0)
         
-        # Apply gradients to the central model
+        # Applicazione dei pesi calcolati al modello centrale
         apply_gradients(average_gradients)
         
-        # Clear gradients for next round
         client_gradients = []
         
         current_round += 1
@@ -69,6 +104,7 @@ def update_frequency():
     data = request.json
     update_frequency = data['update_frequency']
     return jsonify({"status": "Update frequency set"}), 200
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
