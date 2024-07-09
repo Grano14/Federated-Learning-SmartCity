@@ -119,7 +119,7 @@ def get_dataset(args):
                 if(boxes['label'] == 'Yellow'):
                     labels = 3
                 if(boxes['label'] == 'off'):
-                    labels = 4
+                    labels = 4#
 
                 x1, x2 = boxes['x_min'], boxes['x_max']
                 y1, y2 = boxes['y_min'], boxes['y_max']
