@@ -9,9 +9,6 @@ from tensorflow.keras.optimizers import SGD
 
 app = Flask(__name__)
 
-client_ip = '192.168.1.10'
-client_port = 8000
-
 UPLOAD_URL = 'http://127.0.0.1:5000/upload_gradients'
 MODEL_URL = 'http://127.0.0.1:5000/get_model'
 
@@ -54,8 +51,20 @@ def get_gradients(model, x, y):              #CALCOLO I PESI DEL MODELLO
     gradients = [g.numpy() for g in gradients]
     return gradients
 
+def connect():
+    try:
+        response = requests.get('http://127.0.0.1:5000/get_connection')
+        if response.status_code == 200:
+            print("Connected to server successfully.")
+            # Esegui ulteriori operazioni dopo la connessione
+        else:
+            print(f"Failed to connect to server. Status code: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
+
 def main():
     # creazione modello
+    connect()
     model = create_model()
 
     # Generazione dati (ora sono randomici)

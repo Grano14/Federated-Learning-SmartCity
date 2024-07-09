@@ -9,20 +9,35 @@ from tensorflow.keras.optimizers import SGD
 
 app = Flask(__name__)
 
-central_model = None
+
 client_gradients = []
+
 
 # PARAMETRI PER AFO
 update_frequency = 1  # NON SO A QUANTO METTERLA
 current_round = 0
 
+# INIZIALIZZAZIONE DEL MODELLO CENTRALE
+def create_model():
+    model = Sequential([
+        Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)),
+        MaxPooling2D((2, 2)),
+        Flatten(),
+        Dense(64, activation='relu'),
+        Dense(1, activation='sigmoid')
+    ])
+    model.compile(optimizer=SGD(), loss='binary_crossentropy', metrics=['accuracy'])
+    return model
 
-@app.route('/connect', methods=['POST'])   #TENGO TRACCIA DEI CLIENT CONNESSI
+central_model = create_model()
+
+
+@app.route('/connect_client', methods=['GET'])   #TENGO TRACCIA DEI CLIENT CONNESSI
 def connect_client():
-    global connected_clients
-    client_info = request.json
-    connected_clients.append(client_info)
-    print(f"Client connected: {client_info['ip']}:{client_info['port']}")
+    #global connected_clients
+    #connected_clients.append(client_info)
+    #print(f"Client connected: {client_info['ip']}:{client_info['port']}")
+  
     return jsonify({"status": "Client connected"}), 200
 
 
@@ -46,21 +61,6 @@ def send_model():
             print(f"Failed to send model to {client['ip']}:{client['port']}, status code {response.status_code}")
 
     return jsonify({"status": "Model sent to selected clients"}), 200
-
-
-
-
-# INIZIALIZZAZIONE DEL MODELLO CENTRALE
-def create_model():
-    model = Sequential([
-        Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)),
-        MaxPooling2D((2, 2)),
-        Flatten(),
-        Dense(64, activation='relu'),
-        Dense(1, activation='sigmoid')
-    ])
-    model.compile(optimizer=SGD(), loss='binary_crossentropy', metrics=['accuracy'])
-    central_model = model
 
 
 
