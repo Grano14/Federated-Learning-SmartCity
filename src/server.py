@@ -12,6 +12,7 @@ import io
 
 app = Flask(__name__)
 
+# STRUTTURA CLIENT
 class Client:
     def __init__(self, accuracy, id, flag, attendi):
         self.accuracy = accuracy
@@ -54,24 +55,13 @@ def create_model():
     return global_model
 
 
-
-# Supponiamo che 'model' sia il tuo modello TensorFlow globale
-# Addestra o aggiorna il modello con i dati aggregati dai client
-
 central_model = create_model()
 # Salva il modello globale
 #global_model_path = './src/modello_globale.'
 #tf.saved_model.save(central_model, global_model_path)
 #print(f"Modello globale salvato in: {global_model_path}")
 
-avg_w = []
-client = []
-client_flag = [] #SERVE PER TENERE TRACCIA DI QUALI CLIENT DEVONO ESSERE AGGIORNATI
-
-
-# PARAMETRI PER AFO
-update_frequency = 1  # NON SO A QUANTO METTERLA
-current_round = 0
+client = [] #SERVE PER TENERE TRACCIA DEI CLIENT
 
 #lista dei pesi e dell'accuracy ricevuti dai client
 weights = []
@@ -88,31 +78,18 @@ def average_weights(w):
             w_avg[key] += w[i][key]
         w_avg[key] = torch.div(w_avg[key], len(w))
     prova = w_avg
-    print('prova ----------->\n\n\n', prova,  '\n\n\n ----PROVA-----PROVA-----PROVA----')
-    print('tipo nella funzione che calcola la media -------->', type(w_avg))
     return w_avg
-"""
 
-def average_weights(w):
-    w_avg = []
-    
-    for item in w:
-        w_avg.append(copy.deepcopy(item))
-
-    for key in w_avg.keys():
-        for i in range(1, len(w)):
-            w_avg[key] += w[i][key]
-        w_avg[key] = torch.div(w_avg[key], len(w))
-    return w_avg
-"""
+# FUNZIONE PER IL CALCOLO DELLA MEDIA
 def mean(lista):
     if len(lista) == 0:
-        return None  # Gestione del caso di lista vuota
+        return None 
     
     somma = sum(lista)
     media = somma / len(lista)
     return media
 
+#SCELTA DEI CLIENT DA AGGIORNARE
 def client_to_update(accuracy):
     
     client_updated = 0
@@ -120,26 +97,30 @@ def client_to_update(accuracy):
     
 
     sorted_client = sorted(client, key=lambda x: x.accuracy, reverse=False)
-
+    print('FUNZINE  CLIENT_TO_UPDATE -----')
     for item in sorted_client:
         if item.accuracy < a_avg or client_updated < 1:
             item.flag = True
             client_updated = client_updated + 1
             print("id client da aggiornare------>",  item.id)
         item.attendi = False
-
+        print('Client = ', item.id, '  ----  attendi = ', item.attendi, '   ---   flag = ', item.flag)
+    print('FINE     FUNZINE  CLIENT_TO_UPDATE -----')
     
-
+# RICERCA DEI CLIENT PER ID
 def find_client_by_id(client_id):
     for item in client:
         if item.id == int(client_id):
             return item
     return None 
 
+# INVIO DEI CODICI E DEI PERMESSI AI CLIENT IN BASE ALLA SCELTA EFFETTUATA PRIMA SU QUALI CLIENT DA AGGIORNARE
 @app.route('/get_permission', methods=['GET'])
 def get_new_weight():    
-
+    print('FUNZIONE GET_PERMISSION --------')
     n_client = find_client_by_id(request.json.get('id'))
+    print('Client = ', n_client.id, '  ----  attendi = ', n_client.attendi, '   ---   flag = ', n_client.flag)
+
     if n_client != None and n_client.flag and (not n_client.attendi):
         
         data = {
@@ -158,13 +139,14 @@ def get_new_weight():
             data = {
                 'codice': 0,
             }
+            n_client.flag == False
+            n_client.attendi = True
             return jsonify(data)
 
 
  #####GET DEI NUOVI PESI VERSO IL CLIENT
 @app.route('/get_model_weight', methods=['GET'])
 def get_model_weights():
-    print('tipo nella getTTTTTTTTTT', type(prova))
     buffer = io.BytesIO()
     torch.save(prova, buffer)
     buffer.seek(0)  # Riporta il puntatore all'inizio del buffer
@@ -185,7 +167,6 @@ def upload_model_weights():
     if file:
         file.save('./src/received_model_weights.pth')
         model_weights = torch.load('./src/received_model_weights.pth')
-        print(type(model_weights)) 
         weights.append(model_weights)
     else: 
         return 'Pesi non memorizzati' 
@@ -200,8 +181,6 @@ def upload_model_weights():
     print(len(weights))
     if len(weights) == 3: 
         average_weights(weights)
-        print('TIPO PROVA NELLA UPDATE_MODEL', type(prova))
-        print("nuovo peso -------->",   prova)
         client_to_update(accuracy)
         weights.clear()
 
@@ -221,6 +200,13 @@ def connect_client():
     print(client)
     return 'client inserito'
 
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
+
+
+"""
 
 @app.route('/send_model', methods=['POST'])     #FUNZIONE PER INVIO MODELLO CENTRALE AI CLIENT
 def send_model():
@@ -289,7 +275,5 @@ def update_frequency():
     data = request.json
     update_frequency = data['update_frequency']
     return jsonify({"status": "Update frequency set"}), 200
+"""
 
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
