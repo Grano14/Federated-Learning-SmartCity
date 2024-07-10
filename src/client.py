@@ -2,114 +2,92 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
-from utils import get_dataset_bosch
-from torch.utils.data import DataLoader, random_split
 import torch.optim as optim
 import requests
 import io
+import time
 
-
-# CREAZIONE MODELLO (UNIFORME SU TUTTI I CLIENT + SERVER)
-def create_model_and_dataset():
-    class MLP(nn.Module):
-        def __init__(self, dim_in, dim_hidden, dim_out):
-            super(MLP, self).__init__()
-            self.layer_input = nn.Linear(dim_in, dim_hidden)
-            self.relu = nn.ReLU()
-            self.dropout = nn.Dropout(p=0.5)
-            self.layer_hidden = nn.Linear(dim_hidden, dim_out)
-
-        def forward(self, x):
-            x = x.view(-1, x.shape[1] * x.shape[-2] * x.shape[-1])  # Flatten the input
-            x = self.layer_input(x)  # Apply input layer
-            x = self.dropout(x)  # Apply dropout
-            x = self.relu(x)  # Apply ReLU activation
-            x = self.layer_hidden(x)  # Apply hidden layer
-            return x  # Output logits directly for CrossEntropyLoss
-
-    train_dataset, test_dataset = get_dataset_bosch()
-
-    img_size = train_dataset[0][0].shape
-    len_in = 1
-    for x in img_size:
-        len_in *= x
-    global_model = MLP(dim_in=len_in, dim_hidden=64, dim_out=5)  # Assuming 4 classes
-    return global_model, train_dataset, test_dataset
-
-#unzione per allenare il modello sui dati
-def train_model(model, train_loader, criterion, optimizer, num_epochs=1):
-    model.train()
-    for epoch in range(num_epochs):
-        running_loss = 0.0
-        for images, labels in train_loader:
-            optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.item()
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}')
-
-#unzione per valutare le prestazioni del modello
-def validate_model(model, test_loader):
-    model.eval()
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for images, labels in test_loader:
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    print(f'Accuracy of the model on the test set: {100 * correct / total}%')
+import random
+from client_utils import create_model_and_dataset, train_model, validate_model, send_weights
+from torch.utils.data import DataLoader
 
 def main():
-    # Creazione modello
+    # Creazione modello e dei dataset
     model, train_dataset, test_dataset = create_model_and_dataset()
-    """"
+
+    #definizione di batch_size e dei train e test loader
     batch_size = 32
-    
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
+    #impostazione di criterior e optimizer da passare al modello
     criterion = nn.CrossEntropyLoss()  # Cross-entropy loss for multi-class classification
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     
     # Addestriamo il modello
     train_model(model, train_loader, criterion, optimizer, num_epochs=1)
     
-    validate_model(model, test_loader)
+    #validazionde del modello
+    accuracy = validate_model(model, test_loader)
 
     # Salvataggio dei pesi del modello
     torch.save(model.state_dict(), './src/model_weights.pth')
     print("Model weights saved to 'model_weights.pth'")
-    """
 
-    #funzione per il salvataggio dei pesi sul file locale
-    model.load_state_dict(torch.load('./src/model_weights.pth'))
-    print(model.state_dict())
+    #model.load_state_dict(torch.load('./src/model_weights.pth'))
+    #print(model.state_dict())
 
     #salvataggio pesi nella variabile
     model_weights = model.state_dict()
 
-    # Serializza i pesi del modello in un buffer binario
-    buffer = io.BytesIO()
-    torch.save(model_weights, buffer)
-    buffer.seek(0)
+    #connessione al server, ed invio dell'id del client
+    server_url_connect = 'http://localhost/connect'  
 
-    # URL del server a cui inviare i pesi del modello
-    server_url = 'http://localhost:5000/upload_model_weights'
+    #L'id da inviare
+    id = random.randint(1, 50)
+    data_id = {'id': id}  
 
-    # Invia una richiesta POST con i pesi del modello
-    response = requests.post(server_url, files={'file': buffer})
+    # Invia la richiesta POST
+    response = requests.post(server_url_connect, json=data_id)
+    while(response['flag'] == 0):
+        id = random.randint(1, 50)
+        response = requests.post(server_url_connect, json=data_id)
+    print("connessione effettuata")
 
-    # Controlla la risposta del server
-    if response.status_code == 200:
-        print('Model weights successfully uploaded')
-    else:
-        print('Failed to upload model weights:', response.content)
+    ################################INVIO PESI AL SERVER##########################################
+    send_weights(model_weights, accuracy, id)
+    ##############################################################################################
+
+    ######################RICEVI I NUOVI PESI DAL MODELLO CENTRALE################################
+
+    #URL del server per ricevere i pesi
+    server_url_load = 'http://localhost:5000/load_model_weight'
+
+    #addestramento in 10 epoche 
+    epoch = 10
+    for i in range(epoch):
+
+        response = requests.post(server_url_load, json=data_id)
+        while(response['flag'] == 0):
+            time.sleep(1000)
+            response = requests.post(server_url_load, json=data_id)
+        print('Weights from server successfully recived')
+
+        #carico ed addestro il modello sui nuovi pesi ricevuti
+        new_weights = response['weights']
+        model.load_state_dict(new_weights)
+        train_model(model, train_loader, criterion, optimizer, num_epochs=1)
+
+        #valutazione del modello
+        accuracy = validate_model(model, test_loader)
+
+        ################################INVIO PESI AL SERVER##########################################
+        send_weights(new_weights, accuracy, id)
+        ##############################################################################################
 
 
+    ##############################################################################################
+        
 if __name__ == "__main__":
     main()
 
