@@ -153,7 +153,7 @@ def get_dataset(args):
 
         #inserire il path del file train.yaml
         #istanziazione del dataset
-        dataset = TrafficLightDataset(yaml_file='./dataset/train/train.json', transform=transform)
+        dataset = TrafficLightDataset(yaml_file='./dataset/test/test.json', transform=transform)
 
         #instanziazione valore per lo split del dataset
         test_ratio = 0.2  # 20% dei dati per il set di test
@@ -183,7 +183,7 @@ def get_dataset(args):
 
     return train_dataset, test_dataset, user_groups
 
-def get_dataset_bosch():
+def get_dataset_bosch(dataset_str):
     #classe per la lettura del file train.yaml che contiene le label delle immagini e per l'istanziazione del dataset
     class TrafficLightDataset(Dataset):
         def __init__(self, yaml_file, transform=None):
@@ -242,7 +242,7 @@ def get_dataset_bosch():
 
     #inserire il path del file train.yaml
     #istanziazione del dataset
-    dataset = TrafficLightDataset(yaml_file='./dataset/train/train.json', transform=transform)
+    dataset = TrafficLightDataset(yaml_file=dataset_str, transform=transform)
 
     #instanziazione valore per lo split del dataset
     test_ratio = 0.2  # 20% dei dati per il set di test

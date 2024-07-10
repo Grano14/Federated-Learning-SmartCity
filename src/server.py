@@ -44,7 +44,7 @@ def create_model():
 
         
 
-    train_dataset, test_dataset = get_dataset_bosch()
+    train_dataset, test_dataset = get_dataset_bosch('./dataset/datasetFile/dataset1.json')
 
     img_size = train_dataset[0][0].shape
     len_in = 1
@@ -173,8 +173,8 @@ def upload_model_weights():
     
     new_client = find_client_by_id(request.form.get('id'))
     if new_client != None:
-        new_client.accuracy = int(request.form.get('accuracy'))
-        accuracy.append(int(request.form.get('accuracy')))
+        new_client.accuracy = float(request.form.get('accuracy'))
+        accuracy.append(float(request.form.get('accuracy')))
     else:
         return 'Client non trovato'
     
