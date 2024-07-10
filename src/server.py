@@ -72,6 +72,7 @@ central_model = create_model()
 
 client_gradients = []
 
+
 # PARAMETRI PER AFO
 update_frequency = 1  # NON SO A QUANTO METTERLA
 current_round = 0
