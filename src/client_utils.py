@@ -77,11 +77,12 @@ def send_weights(model_weights, accuracy, id):
     buffer.seek(0)
 
     # URL del server a cui inviare i pesi
-    server_url_upload = 'http://localhost:5000/upload_model_weights'
+    server_url_upload = 'http://localhost:5000/upload_client_weights'
 
     # Invia una richiesta POST con i pesi del modello e l'accuracy
     data = {'accuracy': accuracy, "id": id}  
-    response = requests.post(server_url_upload, files={'file': buffer}, json=data)
+    response = requests.post(server_url_upload, files={'file': buffer}, data=data)
+    print(response.text)
     # Controlla la risposta del server
     if response.status_code == 200:
         print('Model weights successfully uploaded')
