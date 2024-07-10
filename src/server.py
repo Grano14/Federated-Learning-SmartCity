@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import random
 import copy
 import numpy as np    
+import tensorflow as tf
 from torch import nn
 import torch
 from torch.utils.data import DataLoader
@@ -10,6 +11,14 @@ from torch import nn
 
 app = Flask(__name__)
 
+class Client:
+    def __init__(self, accuracy, id, flag):
+        self.accuracy = accuracy
+        self.id = id
+        self.flag = flag
+
+    def __str__(self):
+        return f'Client(id={self.id}, accuracy={self.accuracy}, flag={self.flag})'
 
 # INIZIALIZZAZIONE DEL MODELLO CENTRALE
 def create_model():
@@ -69,32 +78,80 @@ central_model = create_model()
 #tf.saved_model.save(central_model, global_model_path)
 #print(f"Modello globale salvato in: {global_model_path}")
 
-
-client_gradients = []
+avg_w = None
+client = []
+client_flag = [] #SERVE PER TENERE TRACCIA DI QUALI CLIENT DEVONO ESSERE AGGIORNATI
 
 
 # PARAMETRI PER AFO
 update_frequency = 1  # NON SO A QUANTO METTERLA
 current_round = 0
 
-#lista dei pesi ricevuti dai client
+#lista dei pesi e dell'accuracy ricevuti dai client
 weights = []
+accuracy = []
 
 #funzione per il calcolo della media dei pesi
-def average_weights(w):
-    """
-    Returns the average of the weights.
-    """
+"""def average_weights(w, accuracy):
+
     w_avg = copy.deepcopy(w[0])
     for key in w_avg.keys():
         for i in range(1, len(w)):
             w_avg[key] += w[i][key]
         w_avg[key] = torch.div(w_avg[key], len(w))
     return w_avg
+"""
 
-####################################
-@app.route('/upload_model_weights', methods=['POST'])
+def average_weights(w):
+    w_avg = []
+    
+    for item in w:
+        w_avg.append(copy.deepcopy(item))
+
+    for key in w_avg.keys():
+        for i in range(1, len(w)):
+            w_avg[key] += w[i][key]
+        w_avg[key] = torch.div(w_avg[key], len(w))
+    return w_avg
+
+def client_to_update(accuracy):
+    
+    client_updated = 0
+    a_avg = accuracy.mean()
+
+    sorted_client = sorted(client, key=lambda x: x.accuracy, reverse=False)
+
+    for item in sorted_client:
+        if item.accuracy < a_avg:
+            item.flag = True
+            client_updated = client_updated + 1
+        if client_updated < 2:
+            item.flag = True
+            client_updated = 1 + client_updated
+
+def find_client_by_id(clients, client_id):
+    for item in clients:
+        if item.id == client_id:
+            return item
+    return None 
+
+@app.route('/get_new_weight', methods=['GET'])
+def get_new_weight():    
+
+    new_client = find_client_by_id(request.json.get('id'))
+
+    if new_client != None and new_client.flag:
+        new_client.flag == False
+        return 'Accesso consentito', avg_w, 200
+
+    return 'Accesso negato', 400, 0
+
+
+
+
+@app.route('/upload_client_weights', methods=['POST'])
 def upload_model_weights():
+
     if 'file' not in request.files:
         return 'No file part', 400
     file = request.files['file']
@@ -104,28 +161,33 @@ def upload_model_weights():
         file.save('./src/received_model_weights.pth')
         model_weights = torch.load('./src/received_model_weights.pth')
         weights.append(model_weights)
-        print(len(weights))
-        if len(weights) == 5:
-            avg_w = average_weights(weights)
-            print(avg_w)
-        return 'File successfully uploaded', 200
+    else: 
+        return 'Pesi non memorizzati', 400  
 
-####################################
+    accuracy.append(request.json.get('accuracy'))
+    if len(weights) == 6: 
+        avg_w = average_weights(weights)
+        client_to_update(accuracy)
+        weights.clear()
+        accuracy.clear()
+
+    return 'Pesi inviati correttamente', 200
+  
+
+
 
 
 
 @app.route('/connect', methods=['GET'])   #TENGO TRACCIA DEI CLIENT CONNESSI
 def connect_client():
-    #global connected_clients
-    #client_info = request.json
-    #connected_clients.append(client_info)
-    #print(f"Client connected: {client_info['ip']}:{client_info['port']}")
 
-    global_model_path = './src/modello_globale.'
+    
+    new_client = Client(None, request.json.get('id'), True)
 
-    #Carica il modello globale
-    loaded_model = tf.saved_model.load(global_model_path)
-    #print("Modello globale caricato con successo.")
+    for item in client:
+        if item.id == new_client.id:
+            return 'client non connesso - chiave già inserita', 400 
+    client.append(new_client)
 
     return jsonify({"status": "Client connected", "model": loaded_model}), 200
 
