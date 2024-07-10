@@ -2,9 +2,9 @@ from flask import Flask, request, jsonify
 import random
 import copy
 import numpy as np    
-import tensorflow as tf
+from torch import nn
 import torch
-
+from torch.utils.data import DataLoader
 from utils import get_dataset_bosch
 from torch import nn
 
@@ -14,17 +14,22 @@ app = Flask(__name__)
 # INIZIALIZZAZIONE DEL MODELLO CENTRALE
 def create_model():
 
-    class MLP(tf.Module):
+    class MLP(nn.Module):
         def __init__(self, dim_in, dim_hidden, dim_out):
             super(MLP, self).__init__()
-            self.layer_input = tf.keras.layers.Dense(dim_hidden, activation='relu', input_dim=dim_in)
-            self.dropout = tf.keras.layers.Dropout(0.5)
-            self.layer_hidden = tf.keras.layers.Dense(dim_out, activation='sigmoid')
+            self.layer_input = nn.Linear(dim_in, dim_hidden)
+            self.relu = nn.ReLU()
+            self.dropout = nn.Dropout(p=0.5)
+            self.layer_hidden = nn.Linear(dim_hidden, dim_out)
 
-        def __call__(self, inputs):
-            x = self.layer_input(inputs)
-            x = self.dropout(x)
-            return self.layer_hidden(x)
+        def forward(self, x):
+            x = x.view(-1, x.shape[1] * x.shape[-2] * x.shape[-1])  # Flatten the input
+            x = self.layer_input(x)  # Apply input layer
+            x = self.dropout(x)  # Apply dropout
+            x = self.relu(x)  # Apply ReLU activation
+            x = self.layer_hidden(x)  # Apply hidden layer
+            return x  # Output logits directly for CrossEntropyLoss
+
         
 
     train_dataset, test_dataset = get_dataset_bosch()
@@ -34,6 +39,23 @@ def create_model():
     for x in img_size:
         len_in *= x
     global_model = MLP(dim_in=len_in, dim_hidden=64, dim_out=1)
+    global_model.eval()
+
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    with torch.no_grad():
+        for images, labels in test_loader:
+            # Calcola le predizioni del modello
+            outputs = global_model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            
+            # Calcola le statistiche per la valutazione
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    # Calcola l'accuratezza del modello sui dati di test
+    accuracy = correct / total
+    print(f'Accuracy on the test set: {accuracy:.4f}')
+
     return global_model
 
 
@@ -43,9 +65,9 @@ def create_model():
 
 central_model = create_model()
 # Salva il modello globale
-global_model_path = './src/modello_globale.'
-tf.saved_model.save(central_model, global_model_path)
-print(f"Modello globale salvato in: {global_model_path}")
+#global_model_path = './src/modello_globale.'
+#tf.saved_model.save(central_model, global_model_path)
+#print(f"Modello globale salvato in: {global_model_path}")
 
 
 client_gradients = []
@@ -54,6 +76,7 @@ client_gradients = []
 update_frequency = 1  # NON SO A QUANTO METTERLA
 current_round = 0
 
+#lista dei pesi ricevuti dai client
 weights = []
 
 #funzione per il calcolo della media dei pesi

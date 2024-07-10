@@ -10,7 +10,7 @@ import io
 
 
 # CREAZIONE MODELLO (UNIFORME SU TUTTI I CLIENT + SERVER)
-def create_model():
+def create_model_and_dataset():
     class MLP(nn.Module):
         def __init__(self, dim_in, dim_hidden, dim_out):
             super(MLP, self).__init__()
@@ -36,6 +36,7 @@ def create_model():
     global_model = MLP(dim_in=len_in, dim_hidden=64, dim_out=5)  # Assuming 4 classes
     return global_model, train_dataset, test_dataset
 
+#unzione per allenare il modello sui dati
 def train_model(model, train_loader, criterion, optimizer, num_epochs=1):
     model.train()
     for epoch in range(num_epochs):
@@ -49,6 +50,7 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs=1):
             running_loss += loss.item()
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}')
 
+#unzione per valutare le prestazioni del modello
 def validate_model(model, test_loader):
     model.eval()
     correct = 0
@@ -63,7 +65,7 @@ def validate_model(model, test_loader):
 
 def main():
     # Creazione modello
-    model, train_dataset, test_dataset = create_model()
+    model, train_dataset, test_dataset = create_model_and_dataset()
     """"
     batch_size = 32
     
@@ -82,9 +84,12 @@ def main():
     torch.save(model.state_dict(), './src/model_weights.pth')
     print("Model weights saved to 'model_weights.pth'")
     """
+
+    #funzione per il salvataggio dei pesi sul file locale
     model.load_state_dict(torch.load('./src/model_weights.pth'))
     print(model.state_dict())
 
+    #salvataggio pesi nella variabile
     model_weights = model.state_dict()
 
     # Serializza i pesi del modello in un buffer binario
