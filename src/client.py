@@ -51,6 +51,7 @@ def main():
     response = requests.post(server_url_connect, json=data_id)
     while(response['flag'] == 0):
         id = random.randint(1, 50)
+        data_id = {'id': id} 
         response = requests.post(server_url_connect, json=data_id)
     print("connessione effettuata")
 
