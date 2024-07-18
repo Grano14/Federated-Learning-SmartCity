@@ -46,7 +46,7 @@ new_text = new_text + ']'
 with open('./test.json', 'a') as file:
     file.write(new_text + '\n')
 print(new_text)
-"""
+
 
 with open('/home/giuseppe/ProgettoSmartCity/fdsml/venv/src/Federated-Learning-PyTorch-master/dataset/test/test.json', 'r') as file:
     data = json.load(file)
@@ -94,4 +94,26 @@ with open('./dataset8.json', 'a') as file:
     file.write(new_text4 + '\n')
 with open('./dataset9.json', 'a') as file:
     file.write(new_text5 + '\n')
+"""
+
+
+with open('/home/giuseppe/ProgettoSmartCity/fdsml/venv/src/Federated-Learning-PyTorch-master/dataset/datasetFile/dataset9.json', 'r') as file:
+    data = json.load(file)
+yellow, red, green, off = 0, 0, 0, 0
+for item in data:
+    if item['boxes']:
+        if item['boxes']['label'] == 'Red':
+            red += 1
+        if item['boxes']['label'] == 'Green':
+            green += 1
+        if item['boxes']['label'] == 'Yellow':
+            yellow += 1
+        if item['boxes']['label'] == 'off':
+            off += 1
+
+print(red)
+print(green)
+print(yellow)
+print(off)
+        
 

@@ -45,7 +45,7 @@ def main():
     else:
         print("dataset non selezionato")  
 
-    print(dataset_str)  
+    #print(dataset_str)  
     
 
     # Creazione modello e dei dataset
@@ -74,8 +74,8 @@ def main():
     accuracy = validate_model(model, test_loader)
 
     # Salvataggio dei pesi del modello
-    torch.save(model.state_dict(), './src/model_weights.pth')
-    print("Model weights saved to 'model_weights.pth'")
+    #torch.save(model.state_dict(), './src/model_weights.pth')
+    #print("Model weights saved to 'model_weights.pth'")
 
     #model.load_state_dict(torch.load('./src/model_weights.pth'))
     #print(model.state_dict())
@@ -98,11 +98,11 @@ def main():
         id = random.randint(1, 50)
         data_id = {'id': id} 
         response = requests.post(server_url_connect, json=data_id)
-        print(response.status_code)
-        print(response.text)
-    print(response.text)
-    print(response.status_code)
-    print('iddd ====== ', id)
+        #print(response.status_code)
+        #print(response.text)
+    #print(response.text)
+    #print(response.status_code)
+    print('id ======> ', id)
     ################################INVIO PESI AL SERVER##########################################
     #accuracy_rand = random.randint(1, 60)
     send_weights(model_weights, accuracy, id)
@@ -121,7 +121,7 @@ def main():
         response = requests.get(server_url_load, json=data_id)
         data = response.json()
         codice = data['codice']
-        print(response.text)
+        #print(response.text)
 
         while codice == 2:      #DEVO ATTENDERE GLI ALTRI CLIENT
             time.sleep(5)
@@ -136,18 +136,18 @@ def main():
             # Deserializza il tensore
             tensor = torch.load(buffer)
 
-            print("Tensore ricevuto:")
-            print(tensor)
+            #print("Tensore ricevuto:")
+            #print(tensor)
             #print(type(tensor))
             model_weights = tensor
-        if codice == 0:         #POSSO PROCEDERE CON I VECCHI PESI
-            print(response.text)
+        #if codice == 0:         #POSSO PROCEDERE CON I VECCHI PESI
+            #print(response.text)
 
        
 
         model.load_state_dict(model_weights)
 
-        train_model(model, train_loader, criterion, optimizer, num_epochs=1)
+        #train_model(model, train_loader, criterion, optimizer, num_epochs=1)
 
         #valutazione del modello
         accuracy = validate_model(model, test_loader)
