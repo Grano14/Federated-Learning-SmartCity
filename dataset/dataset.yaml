@@ -1,6 +1,0 @@
-train: ../dataset/train
-val: ../dataset/test
-test: ../dataset/test
-
-nc: 4
-names: ['red', 'green', 'yellow', 'off']
