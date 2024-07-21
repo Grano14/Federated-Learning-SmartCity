@@ -68,7 +68,7 @@ def main():
     else:
         print("dataset non selezionato")
 
-"""
+
     # Addestriamo e validiamo il modello
     command = 'python3 train.py --img 640 --batch 4 --epochs 1 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights'
 
@@ -82,11 +82,17 @@ def main():
     except subprocess.CalledProcessError as e:
         print("Errore durante l'esecuzione del comando:", e)
         print("Output di errore:", e.stderr)
-
+"""
     #carica contenuto del file creato da yolo
     model_file_path = './pesi.pt'
     model_info = torch.load(model_file_path, map_location="cpu")
     #print(model_info['model'])
+
+    with open("./f1score.txt", "r") as file:
+        # Leggere il contenuto del file
+        contenuto = file.read()
+
+    f1score = contenuto
 
     #get model
     LOCAL_RANK = int(os.getenv("LOCAL_RANK", -1))
@@ -109,7 +115,7 @@ def main():
 
     ##########################connessione al server, ed invio dell'id del client###################
     #server url
-    server_url_connect = ' http://127.0.0.1:5000/connect'
+    server_url_connect = ' http://172.20.10.9:5000/connect'
 
     # L'id da inviare
     id = random.randint(1, 50)
@@ -130,10 +136,10 @@ def main():
 
     #invio pesi al server
     accuracy_rand = random.randint(1, 60)
-    send_weights(model_weights, accuracy_rand, id)
+    send_weights(model_weights, 8.1, id)
 
     # URL del server per ricevere i pesi
-    server_url_load = 'http://localhost:5000/get_permission'
+    server_url_load = 'http://172.20.10.9:5000/get_permission'
 
     #addestramento in 10 epoche
     epoch = 10
@@ -152,7 +158,7 @@ def main():
             codice = data['codice']
             # print(response.text)
         if codice == 1:  # POSSO PROCEDERE CON I NUOVI PESI
-            response = requests.get('http://localhost:5000/get_model_weight')
+            response = requests.get('http://172.20.10.9:5000/get_model_weight')
             buffer = io.BytesIO(response.content)
 
             # Deserializza il tensore
@@ -205,7 +211,8 @@ def main():
         model_weights = model.state_dict()
 
         ################################INVIO PESI AL SERVER##########################################
-        send_weights(model_weights, accuracy_rand, id)
+        accuracy_rand = random.randint(1, 60)
+        send_weights(model_weights, 6.9, id)
         ##############################################################################################
 
     ##############################################################################################

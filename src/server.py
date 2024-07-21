@@ -94,11 +94,12 @@ def client_to_update(accuracy):
     
     client_updated = 0
     a_avg = mean(accuracy)
-    
+    print("accuracy in client_to_update ------------>-",a_avg)
 
     sorted_client = sorted(client, key=lambda x: x.accuracy, reverse=False)
     print('FUNZINE  CLIENT_TO_UPDATE -----')
     for item in sorted_client:
+        print("item.accuracy ---------->", item.accuracy)
         if item.accuracy < a_avg or client_updated < 1:
             item.flag = True
             client_updated = client_updated + 1
@@ -174,6 +175,8 @@ def upload_model_weights():
     new_client = find_client_by_id(request.form.get('id'))
     if new_client != None:
         new_client.accuracy = float(request.form.get('accuracy'))
+        print("accuracy in update weights ------------>-", float(request.form.get('accuracy')))
+
         accuracy.append(float(request.form.get('accuracy')))
     else:
         return 'Client non trovato'
