@@ -68,7 +68,7 @@ def main():
     else:
         print("dataset non selezionato")
 
-
+"""
     # Addestriamo e validiamo il modello
     command = 'python3 train.py --img 640 --batch 4 --epochs 1 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights'
 
@@ -83,12 +83,8 @@ def main():
         print("Errore durante l'esecuzione del comando:", e)
         print("Output di errore:", e.stderr)
 
-
-"""
-
-
     #carica contenuto del file creato da yolo
-    model_file_path = './runs/train/yolov5_traffic_lights30/weights/best.pt'
+    model_file_path = './pesi.pt'
     model_info = torch.load(model_file_path, map_location="cpu")
     #print(model_info['model'])
 
@@ -103,7 +99,7 @@ def main():
 
     RANK = int(os.getenv("RANK", -1))
     ema = ModelEMA(model) if RANK in {-1, 0} else None
-    modello =  deepcopy(de_parallel(model)).half()
+    modello = deepcopy(de_parallel(model)).half()
     ema = deepcopy(ema.ema).half()
 
     model_info['model'] = modello
@@ -176,16 +172,43 @@ def main():
         modello = deepcopy(de_parallel(model)).half()
         ema = deepcopy(ema.ema).half()
         print(model_info['model'])
-        model_info['model'] = 'modello'
+        model_info['model'] = modello
         print(model_info['model'])
 
+        torch.save(model_info, './update_pesi.pt')
+
+        # Addestriamo e validiamo il modello
+        new_command = 'python3 train.py --img 640 --batch 4 --epochs 1 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights --weights ./update_pesi.pt'
+
+        try:
+            # Esegui il comando utilizzando subprocess.run con shell=True
+            result = subprocess.run(new_command, capture_output=True, text=True, shell=True, check=True)
+
+            # Stampa l'output del secondo script
+            print("Output del secondo script:")
+            print(result.stdout)
+        except subprocess.CalledProcessError as e:
+            print("Errore durante l'esecuzione del comando:", e)
+            print("Output di errore:", e.stderr)
+
+        # carica contenuto del file creato da yolo
+        model_file_path = './pesi.pt'
+        model_info = torch.load(model_file_path, map_location="cpu")
+        # print(model_info['model'])
+
+        # get model
+        LOCAL_RANK = int(os.getenv("LOCAL_RANK", -1))
+        model = Model(model_info["model"].yaml).to("cpu")
+        # print(model.state_dict())
+
+        # get weights
+        model_weights = model.state_dict()
 
         ################################INVIO PESI AL SERVER##########################################
         send_weights(model_weights, accuracy_rand, id)
         ##############################################################################################
 
     ##############################################################################################
-
 
 if __name__ == "__main__":
     main()

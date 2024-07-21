@@ -492,6 +492,7 @@ def train(hyp, opt, device, callbacks):
 
                 # Save last, best and delete
                 torch.save(ckpt, last)
+
                 print("\n\n\n\n\n ----------------------------pesi-----------------------------\n\n\n\n")
                 torch.save(ckpt, './pesi.pt')
                 if best_fitness == fi:
