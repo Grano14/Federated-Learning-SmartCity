@@ -77,7 +77,7 @@ def send_weights(model_weights, accuracy, id):
     buffer.seek(0)
 
     # URL del server a cui inviare i pesi
-    server_url_upload = 'http://192.168.1.143:5000/upload_client_weights'
+    server_url_upload = 'http://127.0.0.1:5000/upload_client_weights'
 
     # Invia una richiesta POST con i pesi del modello e l'accuracy
     data = {'accuracy': accuracy, "id": id}  

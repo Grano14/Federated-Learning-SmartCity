@@ -1,3 +1,5 @@
+import threading
+
 from flask import Flask, request, jsonify, send_file
 import random
 import copy
@@ -157,38 +159,44 @@ def get_model_weights():
 
 
 #### CARICAMENTO DEI NUOVI PESI DA PARTE DEI CLIENT
+
+# Crea un oggetto Lock
+lock = threading.Lock()
+
 @app.route('/upload_client_weights', methods=['POST'])
 def upload_model_weights():
-
     if 'file' not in request.files:
         return 'No file part'
+
     file = request.files['file']
     if file.filename == '':
         return 'No selected file'
-    if file:
-        file.save('./src/received_model_weights.pth')
-        model_weights = torch.load('./src/received_model_weights.pth')
-        weights.append(model_weights)
-    else: 
-        return 'Pesi non memorizzati' 
-    
-    new_client = find_client_by_id(request.form.get('id'))
-    if new_client != None:
-        new_client.accuracy = float(request.form.get('accuracy'))
-        print("accuracy in update weights ------------>-", float(request.form.get('accuracy')))
 
-        accuracy.append(float(request.form.get('accuracy')))
+    if file:
+        with lock:
+            file.save('./src/received_model_weights.pth')
+            model_weights = torch.load('./src/received_model_weights.pth')
+            weights.append(model_weights)
+    else:
+        return 'Pesi non memorizzati'
+
+    new_client = find_client_by_id(request.form.get('id'))
+    if new_client is not None:
+        with lock:
+            new_client.accuracy = float(request.form.get('accuracy'))
+            print("accuracy in update weights ------------>-", float(request.form.get('accuracy')))
+            accuracy.append(float(request.form.get('accuracy')))
     else:
         return 'Client non trovato'
-    
-    print(len(weights))
-    if len(weights) == 3: 
-        average_weights(weights)
-        client_to_update(accuracy)
-        weights.clear()
+
+    with lock:
+        print(len(weights))
+        if len(weights) == 5:
+            average_weights(weights)
+            client_to_update(accuracy)
+            weights.clear()
 
     return 'Pesi inviati correttamente'
-  
 
 
 @app.route('/connect', methods=['GET'])   #TENGO TRACCIA DEI CLIENT CONNESSI
