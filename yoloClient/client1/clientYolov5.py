@@ -68,21 +68,21 @@ def main():
     else:
         print("dataset non selezionato")
 
-
+"""
     # Addestriamo e validiamo il modello
-    command = 'python3 train.py --img 640 --batch 4 --epochs 1 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights'
+    command = 'python3 train.py --img 416 --batch 4 --epochs 10 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights'
 
     try:
         # Esegui il comando utilizzando subprocess.run con shell=True
         result = subprocess.run(command, capture_output=True, text=True, shell=True, check=True)
 
         # Stampa l'output del secondo script
-        print("Output del secondo script:")
-        print(result.stdout)
+        #print("Output del secondo script:")
+        #print(result.stdout)
     except subprocess.CalledProcessError as e:
         print("Errore durante l'esecuzione del comando:", e)
         print("Output di errore:", e.stderr)
-"""
+
     #carica contenuto del file creato da yolo
     model_file_path = './pesi.pt'
     model_info = torch.load(model_file_path, map_location="cpu")
@@ -109,13 +109,13 @@ def main():
     ema = deepcopy(ema.ema).half()
 
     model_info['model'] = modello
-    print(model_info['model'])
+    #print(model_info['model'])
 
 
 
     ##########################connessione al server, ed invio dell'id del client###################
     #server url
-    server_url_connect = ' http://172.20.10.9:5000/connect'
+    server_url_connect = ' http://192.168.1.143:5000/connect'
 
     # L'id da inviare
     id = random.randint(1, 50)
@@ -134,17 +134,23 @@ def main():
     print('id ======> ', id)
     ##############################################################################################
 
+    with open("./f1score.txt", "r") as file:
+        # Leggere il contenuto del file
+        contenuto = file.read()
+
+    f1score = contenuto
+
     #invio pesi al server
     accuracy_rand = random.randint(1, 60)
-    send_weights(model_weights, 8.1, id)
+    send_weights(model_weights, f1score, id)
 
     # URL del server per ricevere i pesi
-    server_url_load = 'http://172.20.10.9:5000/get_permission'
+    server_url_load = 'http://192.168.1.143:5000/get_permission'
 
     #addestramento in 10 epoche
     epoch = 10
     for i in range(epoch):
-        print('EPOCA ------------------>', i)
+        print('EPOCA ------------------>', i, 'f1score', f1score)
 
         response = requests.get(server_url_load, json=data_id)
         data = response.json()
@@ -158,7 +164,7 @@ def main():
             codice = data['codice']
             # print(response.text)
         if codice == 1:  # POSSO PROCEDERE CON I NUOVI PESI
-            response = requests.get('http://172.20.10.9:5000/get_model_weight')
+            response = requests.get('http://192.168.1.143:5000/get_model_weight')
             buffer = io.BytesIO(response.content)
 
             # Deserializza il tensore
@@ -177,22 +183,22 @@ def main():
         ema = ModelEMA(model) if RANK in {-1, 0} else None
         modello = deepcopy(de_parallel(model)).half()
         ema = deepcopy(ema.ema).half()
-        print(model_info['model'])
+        #print(model_info['model'])
         model_info['model'] = modello
-        print(model_info['model'])
+        #print(model_info['model'])
 
         torch.save(model_info, './update_pesi.pt')
 
         # Addestriamo e validiamo il modello
-        new_command = 'python3 train.py --img 640 --batch 4 --epochs 1 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights --weights ./update_pesi.pt'
+        new_command = 'python3 train.py --img 416 --batch 4 --epochs 10 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights --weights ./update_pesi.pt'
 
         try:
             # Esegui il comando utilizzando subprocess.run con shell=True
             result = subprocess.run(new_command, capture_output=True, text=True, shell=True, check=True)
 
             # Stampa l'output del secondo script
-            print("Output del secondo script:")
-            print(result.stdout)
+            #print("Output del secondo script:")
+            #print(result.stdout)
         except subprocess.CalledProcessError as e:
             print("Errore durante l'esecuzione del comando:", e)
             print("Output di errore:", e.stderr)
@@ -210,9 +216,15 @@ def main():
         # get weights
         model_weights = model.state_dict()
 
+        with open("./f1score.txt", "r") as file:
+            # Leggere il contenuto del file
+            contenuto = file.read()
+
+        f1score = contenuto
+
         ################################INVIO PESI AL SERVER##########################################
         accuracy_rand = random.randint(1, 60)
-        send_weights(model_weights, 6.9, id)
+        send_weights(model_weights, f1score, id)
         ##############################################################################################
 
     ##############################################################################################
