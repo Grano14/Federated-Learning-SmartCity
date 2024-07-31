@@ -23,7 +23,7 @@ python src/server.py
 
 * Per eseguire i client bisogna posizionarsi nella directory ```./Federated-Learning-SmartCity/yoloClient/``` e si troveranno 5 cartelle, una per ogni client. Bisogna lanciare il comando seguente 5 volte per eseguire i client posizionandosi nelle cartelle dei client:
 ```
-python train.py --img 720 --batch 4 --epochs 1 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights
+python clientYolov5.py
 ```
 
 ## Results
