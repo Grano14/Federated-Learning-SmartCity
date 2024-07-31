@@ -70,7 +70,7 @@ def main():
 
 """
     # Addestriamo e validiamo il modello
-    command = 'python3 train.py --img 416 --batch 4 --epochs 15 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights'
+    command = 'python3 train.py --img 720 --batch 4 --epochs 15 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights'
 
     try:
         # Esegui il comando utilizzando subprocess.run con shell=True
@@ -190,7 +190,7 @@ def main():
         torch.save(model_info, './update_pesi.pt')
 
         # Addestriamo e validiamo il modello
-        new_command = 'python3 train.py --img 416 --batch 4 --epochs 15 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights --weights ./update_pesi.pt'
+        new_command = 'python3 train.py --img 720 --batch 4 --epochs 15 --data ./dataset/dataset.yaml --cfg models/yolov5s.yaml --name yolov5_traffic_lights --weights ./update_pesi.pt'
 
         try:
             # Esegui il comando utilizzando subprocess.run con shell=True
