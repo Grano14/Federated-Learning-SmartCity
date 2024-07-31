@@ -544,9 +544,10 @@ def train(hyp, opt, device, callbacks):
     torch.cuda.empty_cache()
     print(results[0], 'kk', results[1], 'o', results[2], 'f', results[3])
     f1score = (2 * (results[0] * results[1]) / (results[0] + results[1]))
+    precision = results[0]
     with open("./f1score.txt", "w") as file:
         # Scrivere il valore nel file
-        file.write(str(f1score))
+        file.write(str(precision))
     return results
 
 
